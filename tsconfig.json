@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "rootDir" : "./src",
+    "allowJs": true,
+    "strict": true,
+    "target": "es2015",
+    "module": "nodenext",
+    "moduleResolution": "nodenext"
+  },
+  "include": ["./src/**/*.ts"],
+  "exclude": ["node_modules", ".vscode"]
+}

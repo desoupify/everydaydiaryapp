@@ -1,0 +1,37 @@
+{
+    "Tomorrow Night Bright": {
+        "--bg": "#000000",
+        "--fg": "#eaeaea",
+        "--red": "#d54e53",
+        "--orange":"#e78c45",
+        "--yellow":"#eab700",
+        "--green": "#b9ca4a",
+        "--aqua": "#70c0b1",
+        "--blue": "#7aa6da",
+        "--purple": "#c397d8"
+    },
+
+    "Tomorrow Night": {
+        "--bg": "#1d1f21",
+        "--fg": "#c5c8c6",
+        "--red": "#cc6666",
+        "--orange":"#de935f",
+        "--yellow":"#f0c674",
+        "--green": "#b5bd68",
+        "--aqua": "#8abeb7",
+        "--blue": "#81a2be",
+        "--purple": "#b294bb"
+    },
+    
+    "Catppuccin" : {
+        "--bg": "#1e1e2e",
+        "--fg": "#cdd6f4",
+        "--red": "#f38ba8",
+        "--orange":"#fab387",
+        "--yellow":"#f9e2af",
+        "--green": "#a6e3a1",
+        "--aqua": "#94e2d5",
+        "--blue": "#89b4fa",
+        "--purple": "#cba6f7"
+    }
+}

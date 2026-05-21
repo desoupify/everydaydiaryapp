@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <title>Calendar</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <link rel='stylesheet' type='text/css' media='screen' href='/main.css'>
+</head>
+<body>
+<div class="container">
+    <div class="item-container" id="calendar">
+        <p class="month"><%=month%> <%=year%></p>
+        <ul class="week">
+            <li>Su</li>
+            <li>M</li>
+            <li>Tu</li>
+            <li>W</li>
+            <li>Th</li>
+            <li>F</li>
+            <li>Sa</li>
+        </ul>
+        <ul class="days">
+            <%- daysString %>
+        </ul>
+    </div>
+
+    <div class="right-sidebar-container" id="sidebar">
+        <div class="item-container" id="details">
+            <h1><%=month %> <%=day %></h1>
+            <p>
+                <%- include('partials/new-entry.ejs') %>
+                <% if (!hasLogin) { %>
+                    <a href='/login'>Log in</a> or <a href="/register">register</a> to save entries.
+                <% } %>
+            </p>
+        </div>
+    </div>
+    
+</div>
+
+</body>
+</html>
