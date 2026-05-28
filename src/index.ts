@@ -16,7 +16,7 @@ const app:Application = express(),
 let todayDate = today(getLocalTimeZone());
 let selectedDate = todayDate;
 let currentUser:unknown = -1;
-let currentUserName:unknown = "";
+let currentUsername:unknown = "";
 
 app.set('view engine', 'ejs')
 app.use(express.static('static'))
@@ -36,13 +36,27 @@ var renderParams = {
     day: selectedDate.day,
     year: year,
     daysString: makeCalendarDays(selectedDate),
-    entry: "No entry here."
+    entry: "No entry here.",
+    currentUsername: currentUsername
 }
 
 makeTable()
 
 app.get('/', (req:Request, res:Response) => {
 
+    if (typeof currentUser === 'number') {  // a user is logged in
+        renderParams.hasLogin = true;
+        renderParams.currentUsername = currentUsername;
+
+        // TODO: display entries
+    }
+    else {
+
+    }
+
+    // TODO: ability to change dates
+
+    // TODO: ability to change themes
     res.render('index.ejs', renderParams)
 })
 
@@ -61,8 +75,12 @@ app.post('/register', (req:Request, res:Response) => {
 })
 
 app.get('/login', (req:Request, res:Response) => {
-
-    res.render('login.ejs')
+    if (typeof currentUser == 'number') {
+        res.render('logout.ejs')
+    }
+    else {
+        res.render('login.ejs', {loginStatus : ''})
+    }
 })
 
 app.post('/login', (req:Request, res:Response) => {
@@ -71,7 +89,13 @@ app.post('/login', (req:Request, res:Response) => {
 
     const status:string = authenticate(username, password);
 
-    res.render('login.ejs')
+    res.render('login.ejs', {loginStatus : status})
+})
+
+app.get('/logout', (req:Request, res:Response) => {
+    currentUser = -1;
+    currentUsername = '';
+    res.render('login.ejs', {loginStatus : '<p>Successfully logged out</p>'})
 })
 
 app.post('/add_entry', (req:Request, res:Response) => {
@@ -160,13 +184,12 @@ function authenticate(username:string, password:string) {
             SELECT hash FROM users WHERE id = ?
         `).get(checkId)
 
-    print(checkHash, typeof checkHash)
-
     if (checkHash === undefined) {
         return `<p style='color:red;'>Can't login user: wrong password</p>`;
     }
 
     currentUser = checkId;
+    updateUsername();
     return `<p>Logged in successfully</p>`
 }
 
@@ -279,21 +302,29 @@ function getWeekday(day:number) {
     }
 }
 
+/**
+ * gets the id of a user
+ * @param name 
+ * @returns number
+ */
 function getUserId(name:string) {
     const findId = db.prepare(`SELECT id FROM users 
                 WHERE name = ?`);
-                // FIXME very annoying type isues.
-    const userId1 = findId.get(name);
-    const userId = userId1['hash'];
-    type idType = keyof userId1; 
+    findId.pluck();
+
+    const userId = findId.get(name)
     return userId;
 }
 
-function updateUserName(id:number) {
+function updateUsername() {
+    if (typeof currentUser !== 'number') {
+        return;
+    }
     const findName = db.prepare(`SELECT name FROM users WHERE id = ?`)
     
-    currentUserName = findName.get(id);
+    currentUsername = findName.get(currentUser);
 }
+
 /**
  *  
  * @returns first 50 records of entries 

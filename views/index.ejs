@@ -31,11 +31,13 @@
         <div class="item-container" id="details">
             <h1><%=month %> <%=day %></h1>
             <p>
-                <%- include('partials/new-entry.ejs') %>
                 <% if (!hasLogin) { %>
                     <a href='/login'>Log in</a> or <a href="/register">register</a> to save entries.
+                <% } else { %>
+                    Welcome <%- currentUsername %>!
                 <% } %>
             </p>
+            <%- include('partials/new-entry.ejs') %>
         </div>
     </div>
     
