@@ -3,8 +3,9 @@ import ejs from 'ejs';
 import {startOfMonth, getDayOfWeek, endOfMonth, today, getLocalTimeZone, CalendarDate} from '@internationalized/date';
 import Database from 'better-sqlite3';
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
+import bcrypt, { hashSync } from 'bcryptjs';
 import cookies from 'cookies';
+import { Statement } from "sqlite";
 
 const saltRounds = 10;
 
@@ -14,6 +15,8 @@ const app:Application = express(),
 
 let todayDate = today(getLocalTimeZone());
 let selectedDate = todayDate;
+let currentUser:unknown = -1;
+let currentUserName:unknown = "";
 
 app.set('view engine', 'ejs')
 app.use(express.static('static'))
@@ -21,6 +24,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const db = new Database('./database/diary.sqlite')
+
 db.pragma('journal_mode = WAL');
 
 const month = getMonth(selectedDate),
@@ -39,20 +43,35 @@ makeTable()
 
 app.get('/', (req:Request, res:Response) => {
 
-    //TODO: add recognition of user or let someone log in/register
     res.render('index.ejs', renderParams)
 })
 
 app.get('/register', (req:Request, res:Response) => {
-    res.render('register.ejs')
+    res.render('register.ejs', {registerSuccess : 0})
 })
 app.post('/register', (req:Request, res:Response) => {
-    res.render('register.ejs')
+    const username = req.body.username;
+    const password = req.body.password;
+
+    const success = registerUser(username, password);
+
+    const registerSuccess = (success) ? 1 : 2;
+
+    res.render('register.ejs', {registerSuccess})
+})
+
+app.get('/login', (req:Request, res:Response) => {
+
+    res.render('login.ejs')
 })
 
 app.post('/login', (req:Request, res:Response) => {
-    const login = req.body.entry;
-    console.dir(login)
+    const username = req.body.username,
+          password = req.body.password;
+
+    const status:string = authenticate(username, password);
+
+    res.render('login.ejs')
 })
 
 app.post('/add_entry', (req:Request, res:Response) => {
@@ -121,29 +140,53 @@ function makeTable() {
         PRIMARY KEY("id" AUTOINCREMENT)
         )`)
 
-    dbCreate1.run()
-    dbCreate2.run()
+    dbCreate1.run();
+    dbCreate2.run();
     dbCreate3.run();
 }
 
 function authenticate(username:string, password:string) {
-    const hash = bcrypt.hashSync(password, saltRounds);
-    const id = getUserId(username);
     
-    const getHash = db.prepare(`
-            SELECT hash FROM users WHERE id = ? 
-        `).get(id)
+    const checkId = getUserId(username)
 
-    console.dir(getHash)
+    if (checkId === currentUser) {
+        return `<p>You are already logged in!</p>`
+    }
+    if (checkId === undefined){
+        return `<p style='color: red;'>Can't login user: user doesn't exist</p>`;
+    }
+
+    const checkHash = db.prepare(`
+            SELECT hash FROM users WHERE id = ?
+        `).get(checkId)
+
+    print(checkHash, typeof checkHash)
+
+    if (checkHash === undefined) {
+        return `<p style='color:red;'>Can't login user: wrong password</p>`;
+    }
+
+    currentUser = checkId;
+    return `<p>Logged in successfully</p>`
 }
 
-function registerUser(username:string, hash:string) {
+function registerUser(username:string, password:string) {
+    // first check for user
+
+    const checkExisting = db.prepare('SELECT id FROM users WHERE name = ?').get(username)
+    if (checkExisting !== undefined) {
+        return false;
+    }
+
+    // create hash and insert
+    const hash = hashSync(password, saltRounds)
     const create = db.prepare(`
         INSERT INTO 'users' (name,hash)
         VALUES (?,?)
-    `);
+    `).run(username,hash);
 
-    create.get(username,hash);
+    console.log(`User id ${create.lastInsertRowid} created`)
+    return true
 }   
 /**
  * Calculates the first weekday of the month of the date
@@ -237,26 +280,28 @@ function getWeekday(day:number) {
 }
 
 function getUserId(name:string) {
-    const findId = db.prepare(`SELECT TOP 1 id FROM users 
+    const findId = db.prepare(`SELECT id FROM users 
                 WHERE name = ?`);
-    const userId = findId.get(name);
-
-    print("userId", userId)
+                // FIXME very annoying type isues.
+    const userId1 = findId.get(name);
+    const userId = userId1['hash'];
+    type idType = keyof userId1; 
     return userId;
 }
 
-
+function updateUserName(id:number) {
+    const findName = db.prepare(`SELECT name FROM users WHERE id = ?`)
+    
+    currentUserName = findName.get(id);
+}
 /**
  *  
- * @param name name of user
  * @returns first 50 records of entries 
  */
-function getUserEntries(name:string) { //TODO: test
-    const userId = getUserId(name);
+function getUserEntries() { //TODO: test
 
     const stmt = db.prepare(`SELECT TOP 50 * FROM entries WHERE id = ?`)
-    const entries = stmt.all(userId)
+    const entries = stmt.all(currentUser)
 
-    print(userId)
     return;
 }

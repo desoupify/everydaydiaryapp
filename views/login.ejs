@@ -1,7 +1,26 @@
-<form action="/login" method='POST'>
-    <label for="username" style="visibility: hidden;">Enter username</label>
-    <p>Username <input type="text" value="" id="username-input"></input>
-    </p>
-    <p>Password <input type="password" id="password" ></input></p>
-    <input type="submit" value="Login" id="login-button">
-</form> 
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <title>Calendar</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <link rel='stylesheet' type='text/css' media='screen' href='/main.css'>
+</head>
+<body>
+<%- include('partials/header.ejs') %>
+<div class="container">
+    <div class="item-container" id="calendar">
+        <h1>Login</h1>
+        <form action="/login" method='POST'>
+            <p>Username <input type="text" value="" name="username"></input>
+            </p>
+            <p>Password <input type="password" name="password" ></input></p>
+            <input type="submit" value="Login" id="login-button">
+        </form> 
+    </div>
+    
+</div>
+
+</body>
+</html>

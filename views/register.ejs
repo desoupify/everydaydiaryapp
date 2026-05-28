@@ -8,16 +8,22 @@
     <link rel='stylesheet' type='text/css' media='screen' href='/main.css'>
 </head>
 <body>
+    <%- include('partials/header.ejs') %>
 <div class="container">
     <div class="item-container" id="calendar">
         <h1>Register</h1>
         <form action="/register" method="post">
             <label for="username" style="visibility: hidden;">Enter username</label>
-            <p>Username <input type="text" value="" id="username-input"></input>
+            <p>Username <input type="text" value="" name="username"></input>
             </p>
-            <p>Password <input type="password" id="password" ></input></p>
+            <p>Password <input type="password" name="password" ></input></p>
             <input type="submit" value="Register" id="submit-button">
         </form>
+        <% if (registerSuccess === 1) { %>
+            <p>Successfully registered! <a href="/login">Log in</a> with your username and password.</p>
+        <% } else if (registerSuccess === 2) { %>
+            <p style="color:var(--red);">Error while registering (name already taken?)</p>
+        <% } %>
     </div>
     
 </div>
