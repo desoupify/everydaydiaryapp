@@ -1,5 +1,11 @@
 <div style="text-align: center;">
     <a href="/">home</a> | 
-    <a href="/login">login</a> | 
-    <a href="/register">register</a>
+    <% if (!hasLogin) { %>
+    <a href="/login">login</a>
+    <% } else { %>
+    <a href="/logout">logout</a>
+    <% } %>
+    | 
+    <a href="/register">register</a> | 
+    <a href="/about">about</a>
 </div>

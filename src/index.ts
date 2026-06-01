@@ -1,5 +1,5 @@
 import express, { type Application, type Request, type Response } from "express";
-import ejs from 'ejs';
+import ejs, { render } from 'ejs';
 import {startOfMonth, getDayOfWeek, endOfMonth, today, getLocalTimeZone, CalendarDate} from '@internationalized/date';
 import Database from 'better-sqlite3';
 import jwt from 'jsonwebtoken';
@@ -13,11 +13,6 @@ const app:Application = express(),
       port = 8080,
       print = console.log
 
-let todayDate = today(getLocalTimeZone());
-let selectedDate = todayDate;
-let currentUser:unknown = -1;
-let currentUsername:unknown = "";
-
 app.set('view engine', 'ejs')
 app.use(express.static('static'))
 app.use(express.json());
@@ -27,14 +22,16 @@ const db = new Database('./database/diary.sqlite')
 
 db.pragma('journal_mode = WAL');
 
-const month = getMonth(selectedDate),
-      year = selectedDate.year;
+let todayDate = today(getLocalTimeZone());
+let selectedDate = todayDate;
+let currentUser:unknown = -1;
+let currentUsername:unknown = "";
 
 var renderParams = {
     hasLogin : false,
-    month: month,
+    month: getMonth(selectedDate),
     day: selectedDate.day,
-    year: year,
+    year: selectedDate.year,
     daysString: makeCalendarDays(selectedDate),
     entry: "No entry here.",
     currentUsername: currentUsername
@@ -43,17 +40,12 @@ var renderParams = {
 makeTable()
 
 app.get('/', (req:Request, res:Response) => {
+    const userLoggedIn:boolean = (typeof currentUser === 'number' && currentUser > -1)
 
-    if (typeof currentUser === 'number') {  // a user is logged in
-        renderParams.hasLogin = true;
-        renderParams.currentUsername = currentUsername;
+    renderParams.hasLogin = userLoggedIn;
+    renderParams.currentUsername = currentUsername; // currentUsername updates in authenticate()
 
-        // TODO: display entries
-    }
-    else {
-
-    }
-
+    
     // TODO: ability to change dates
 
     // TODO: ability to change themes
@@ -61,7 +53,7 @@ app.get('/', (req:Request, res:Response) => {
 })
 
 app.get('/register', (req:Request, res:Response) => {
-    res.render('register.ejs', {registerSuccess : 0})
+    res.render('register.ejs', {registerSuccess : 0, hasLogin: renderParams.hasLogin})
 })
 app.post('/register', (req:Request, res:Response) => {
     const username = req.body.username;
@@ -75,11 +67,11 @@ app.post('/register', (req:Request, res:Response) => {
 })
 
 app.get('/login', (req:Request, res:Response) => {
-    if (typeof currentUser == 'number') {
+    if (typeof currentUser == 'number' && currentUser > -1) {
         res.render('logout.ejs')
     }
     else {
-        res.render('login.ejs', {loginStatus : ''})
+        res.render('login.ejs', {loginStatus : '', hasLogin : false})
     }
 })
 
@@ -95,15 +87,19 @@ app.post('/login', (req:Request, res:Response) => {
 app.get('/logout', (req:Request, res:Response) => {
     currentUser = -1;
     currentUsername = '';
+
     res.render('login.ejs', {loginStatus : '<p>Successfully logged out</p>'})
 })
 
 app.post('/add_entry', (req:Request, res:Response) => {
     const entry = req.body.entry;
-    const stmt = db.prepare(`INSERT INTO entries VALUES (?,?,?,?)`)
     
-    // FIXME figure out how to get user
+    print(entry)
 
+})
+
+app.get('/about', (req:Request, res:Response) => {
+    res.render('about', {hasLogin : renderParams.hasLogin})
 })
 
 app.listen(port, () => {
@@ -172,7 +168,6 @@ function makeTable() {
 function authenticate(username:string, password:string) {
     
     const checkId = getUserId(username)
-
     if (checkId === currentUser) {
         return `<p>You are already logged in!</p>`
     }
@@ -329,10 +324,21 @@ function updateUsername() {
  *  
  * @returns first 50 records of entries 
  */
-function getUserEntries() { //TODO: test
+function getUserEntries() { 
 
     const stmt = db.prepare(`SELECT TOP 50 * FROM entries WHERE id = ?`)
     const entries = stmt.all(currentUser)
 
     return;
+}
+
+function newEntry(entry:string) {
+    if (typeof currentUser != 'number') 
+        return false;
+
+    const stmt = db.prepare(`INSERT INTO entries VALUES (?,?,?,?)`)
+        .run(currentUser, entry, '', selectedDate.toString());
+
+    print("New entry at:", stmt.lastInsertRowid)
+
 }
