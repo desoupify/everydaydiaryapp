@@ -7,5 +7,13 @@
     <% } %>
     | 
     <a href="/register">register</a> | 
-    <a href="/about">about</a>
+    <a href="/about">about</a> | 
+    <form action="/change_theme" id="theme_dropdown" method="get">
+        <select name="theme">
+            <option value="">-- theme --</option>
+            <option value="default">Default</option>
+            <option value="tomorrow_night">Tomorrow Night</option>
+            <option value="tomorrow_night_bright">Tomorrow Night Bright</option>
+        </select>
+    </form>
 </div>

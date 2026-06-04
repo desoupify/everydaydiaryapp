@@ -1,11 +1,13 @@
 import express, { type Application, type Request, type Response } from "express";
 import ejs, { render } from 'ejs';
 import {startOfMonth, getDayOfWeek, endOfMonth, today, getLocalTimeZone, CalendarDate} from '@internationalized/date';
+import {marked} from 'marked';
 import Database from 'better-sqlite3';
-import jwt from 'jsonwebtoken';
+import { Statement } from "sqlite";
+
 import bcrypt, { hashSync } from 'bcryptjs';
 import cookies from 'cookies';
-import { Statement } from "sqlite";
+import jwt from 'jsonwebtoken';
 
 const saltRounds = 10;
 
@@ -34,7 +36,9 @@ var renderParams = {
     year: selectedDate.year,
     daysString: makeCalendarDays(selectedDate),
     entry: "No entry here.",
-    currentUsername: currentUsername
+    currentUsername: currentUsername,
+
+    theme: 'default'
 }
 
 makeTable()
@@ -45,10 +49,8 @@ app.get('/', (req:Request, res:Response) => {
     renderParams.hasLogin = userLoggedIn;
     renderParams.currentUsername = currentUsername; // currentUsername updates in authenticate()
 
-    
     // TODO: ability to change dates
 
-    // TODO: ability to change themes
     res.render('index.ejs', renderParams)
 })
 
@@ -81,7 +83,7 @@ app.post('/login', (req:Request, res:Response) => {
 
     const status:string = authenticate(username, password);
 
-    res.render('login.ejs', {loginStatus : status})
+    res.render('login.ejs', {loginStatus : status, hasLogin : renderParams.hasLogin})
 })
 
 app.get('/logout', (req:Request, res:Response) => {
@@ -92,14 +94,24 @@ app.get('/logout', (req:Request, res:Response) => {
 })
 
 app.post('/add_entry', (req:Request, res:Response) => {
-    const entry = req.body.entry;
+    const str = marked.parse(req.body.entry)
     
-    print(entry)
-
+    // TODO: actually insert the entry into database
+    // - parse markdown to html when displaying
+    // - user types in markdown
+    
+    res.render('index', renderParams)
 })
 
 app.get('/about', (req:Request, res:Response) => {
     res.render('about', {hasLogin : renderParams.hasLogin})
+})
+
+app.get('/change_theme', (req:Request, res:Response) => {
+    const request = req.body;
+    // FIXME: not even GETting anything from the form action... 
+
+    res.render('index', renderParams)
 })
 
 app.listen(port, () => {
@@ -135,6 +147,7 @@ function makeCalendarDays(date:CalendarDate) {
     return string
 }
 
+// database schema
 function makeTable() {
     const dbCreate1 = db.prepare(`
         CREATE TABLE if not exists "users" (
