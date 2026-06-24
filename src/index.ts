@@ -35,7 +35,7 @@ var renderParams = {
     day: selectedDate.day,
     year: selectedDate.year,
     daysString: makeCalendarDays(selectedDate),
-    entry: "No entry here.",
+    entry: '',
     currentUsername: currentUsername,
 
     theme: 'default'
@@ -49,6 +49,13 @@ app.get('/', (req:Request, res:Response) => {
     renderParams.hasLogin = userLoggedIn;
     renderParams.currentUsername = currentUsername; // currentUsername updates in authenticate()
 
+    if (typeof getUserEntries() === 'string') {
+        renderParams.entry = getUserEntries() as string;
+    }
+    else {
+        renderParams.entry = '<p>No entry here</p>';
+    }
+    // check date
     // TODO: ability to change dates
 
     res.render('index.ejs', renderParams)
@@ -65,7 +72,7 @@ app.post('/register', (req:Request, res:Response) => {
 
     const registerSuccess = (success) ? 1 : 2;
 
-    res.render('register.ejs', {registerSuccess})
+    res.render('register.ejs', { registerSuccess, hasLogin: renderParams.hasLogin })
 })
 
 app.get('/login', (req:Request, res:Response) => {
@@ -93,13 +100,13 @@ app.get('/logout', (req:Request, res:Response) => {
     res.render('login.ejs', {loginStatus : '<p>Successfully logged out</p>'})
 })
 
-app.post('/add_entry', (req:Request, res:Response) => {
-    const str = marked.parse(req.body.entry)
-    
-    // TODO: actually insert the entry into database
-    // - parse markdown to html when displaying
-    // - user types in markdown
-    
+app.post('/add_entry', async (req:Request, res:Response) => {
+    const mdStr = req.body.entry;
+    const htmlStr = await Promise.resolve(marked.parse(mdStr))
+
+    newEntry(htmlStr)
+    renderParams.entry = htmlStr;
+
     res.render('index', renderParams)
 })
 
@@ -108,8 +115,11 @@ app.get('/about', (req:Request, res:Response) => {
 })
 
 app.get('/change_theme', (req:Request, res:Response) => {
-    const request = req.body;
-    // FIXME: not even GETting anything from the form action... 
+    const theme = req.query.theme;
+    
+    print('theme:', theme)
+
+    // TODO: change the css variables
 
     res.render('index', renderParams)
 })
@@ -139,6 +149,7 @@ function makeCalendarDays(date:CalendarDate) {
         if (day == date.day) {
             string += `<li id="today">${day}<span class="dot red"></span></li>`
         }
+        // TODO: how do i check for previous entries and link them in this function?
         else {
             string += `<li>${day}<span class="dot blank"></span></li>`
         }
@@ -159,7 +170,7 @@ function makeTable() {
 
     const dbCreate2 = db.prepare(`
         CREATE TABLE if not exists "entries" (
-            "user_id"	INTEGER UNIQUE,
+            "user_id"	INTEGER,
             "description"	TEXT,
             "tag"	TEXT,
             "date"	TEXT,
@@ -185,7 +196,7 @@ function authenticate(username:string, password:string) {
         return `<p>You are already logged in!</p>`
     }
     if (checkId === undefined){
-        return `<p style='color: red;'>Can't login user: user doesn't exist</p>`;
+        return `<p style='color: var(--red);'>User doesn't exist</p>`;
     }
 
     const checkHash = db.prepare(`
@@ -193,7 +204,7 @@ function authenticate(username:string, password:string) {
         `).get(checkId)
 
     if (checkHash === undefined) {
-        return `<p style='color:red;'>Can't login user: wrong password</p>`;
+        return `<p style='color:var(--red);'>Wrong password</p>`;
     }
 
     currentUser = checkId;
@@ -335,20 +346,21 @@ function updateUsername() {
 
 /**
  *  
- * @returns first 50 records of entries 
+ * @returns topmost entry for selectedDate 
  */
 function getUserEntries() { 
 
-    const stmt = db.prepare(`SELECT TOP 50 * FROM entries WHERE id = ?`)
-    const entries = stmt.all(currentUser)
+    const stmt = db.prepare(`SELECT * FROM entries WHERE user_id = ? AND date = ?`).pluck()
+    const entry = stmt.get(currentUser, selectedDate.toString())
 
-    return;
+    return entry;
 }
 
 function newEntry(entry:string) {
     if (typeof currentUser != 'number') 
         return false;
 
+    //FIXME: error here?
     const stmt = db.prepare(`INSERT INTO entries VALUES (?,?,?,?)`)
         .run(currentUser, entry, '', selectedDate.toString());
 
