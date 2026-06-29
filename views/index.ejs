@@ -5,7 +5,7 @@
     <meta http-equiv='X-UA-Compatible' content='IE=edge'>
     <title>Calendar</title>
     <meta name='viewport' content='width=device-width, initial-scale=1'>
-    <link rel='stylesheet' type='text/css' media='screen' href='/main.css'>
+    <link rel='stylesheet' type='text/css' media='screen' href='<%-css%>'>
 </head>
 <body>
 
@@ -29,7 +29,7 @@
 
     <div class="right-sidebar-container" id="sidebar">
         <div class="item-container" id="details">
-            <h1><%=month %> <%=day %></h1>
+            <h1 class="title"><%=month %> <%=day %></h1>
             <%- entry %>
             <%- include('partials/new-entry.ejs') %>
         </div>

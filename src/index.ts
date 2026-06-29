@@ -1,13 +1,14 @@
 import express, { type Application, type Request, type Response } from "express";
 import ejs, { render } from 'ejs';
-import {startOfMonth, getDayOfWeek, endOfMonth, today, getLocalTimeZone, CalendarDate} from '@internationalized/date';
 import {marked} from 'marked';
 import Database from 'better-sqlite3';
 import { Statement } from "sqlite";
-
+import {today, getLocalTimeZone, CalendarDate} from '@internationalized/date';
+import fs from 'fs';
+import * as calendar from './calendar.ts'; //ignore error
 import bcrypt, { hashSync } from 'bcryptjs';
-import cookies from 'cookies';
-import jwt from 'jsonwebtoken';
+// import cookies from 'cookies';
+// import jwt from 'jsonwebtoken';
 
 const saltRounds = 10;
 
@@ -31,14 +32,21 @@ let currentUsername:unknown = "";
 
 var renderParams = {
     hasLogin : false,
-    month: getMonth(selectedDate),
+    month: calendar.getMonth(selectedDate),
     day: selectedDate.day,
     year: selectedDate.year,
-    daysString: makeCalendarDays(selectedDate),
+    daysString: calendar.makeCalendarDays(selectedDate),
     entry: '',
     currentUsername: currentUsername,
 
+    css: "main.css",
     theme: 'default'
+}
+
+interface userRow {
+    name: string;
+    id: number;
+    hash: string;
 }
 
 makeTable()
@@ -129,34 +137,7 @@ app.listen(port, () => {
 });
 
 /* ------ */
-/**
- * Generates HTML to represent days in the calendar
- * @param  date - current date
- * @returns raw HTML string of \<li>s to represent days
- */
-function makeCalendarDays(date:CalendarDate) {
-    let firstWeekday = calculateFirstWeekday(date)  // index 0
-    let numDays = endOfMonth(date).day
-    let string = ""
-    let day = 1;
 
-    for (let ptr = 0; day <= numDays; ptr++) {
-        if (firstWeekday > ptr) {
-            string += `<li></li>`
-            continue;
-        }
-
-        if (day == date.day) {
-            string += `<li id="today">${day}<span class="dot red"></span></li>`
-        }
-        // TODO: how do i check for previous entries and link them in this function?
-        else {
-            string += `<li>${day}<span class="dot blank"></span></li>`
-        }
-        day++;
-    }   
-    return string
-}
 
 // database schema
 function makeTable() {
@@ -191,19 +172,22 @@ function makeTable() {
 
 function authenticate(username:string, password:string) {
     
-    const checkId = getUserId(username)
+    const checkId = getUserId(username) as number
+
     if (checkId === currentUser) {
         return `<p>You are already logged in!</p>`
     }
-    if (checkId === undefined){
+    if (checkId === -1){
         return `<p style='color: var(--red);'>User doesn't exist</p>`;
     }
 
-    const checkHash = db.prepare(`
+    const row:userRow = db.prepare(`
             SELECT hash FROM users WHERE id = ?
-        `).get(checkId)
+        `).get(checkId) as userRow
+        
+    const isValid = bcrypt.compareSync(password, row.hash)
 
-    if (checkHash === undefined) {
+    if (!isValid) {
         return `<p style='color:var(--red);'>Wrong password</p>`;
     }
 
@@ -230,96 +214,8 @@ function registerUser(username:string, password:string) {
     console.log(`User id ${create.lastInsertRowid} created`)
     return true
 }   
-/**
- * Calculates the first weekday of the month of the date
- * @return weekday the month starts on.
- */
-function calculateFirstWeekday(date: CalendarDate) {
-    let day = getDayOfWeek(startOfMonth(date),'en-US');
-    
-    return day
-}
 
-/**
- * @param  date the date you're getting the month of
- * @return month name
- */
-function getMonth(date :CalendarDate) {
-    let month = date.month,
-        string = ""
-    if (typeof month !== 'number') return 'Error: not a CalendarDate object'
 
-    switch (month) {
-        case 1:
-            string = 'January'
-            break
-        case 2:
-            string = 'February'
-            break
-        case 3:
-            string = 'March'
-            break;
-        case 4:
-            string = 'April'
-            break;
-        case 5:
-            string = 'May'
-            break;
-        case 6:
-            string = 'June'
-            break;
-        case 7:
-            string = 'July'
-            break;
-        case 8:
-            string = 'August'
-            break;
-        case 9:
-            string = 'September'
-            break;
-        case 10:
-            string = 'October'
-            break;
-        case 11:
-            string = 'November'
-            break;
-        case 12:
-            string = 'December'
-            break;
-        default:
-            string = "How did you get here???"
-            break;
-    }
-    return string
-}
-
-/**
- * 
- * @param  day 
- * @returns weekday of day in string
- */
-function getWeekday(day:number) {
-    if (typeof day !== 'number') 
-        return 'getWeekday needs a number; got ' + (typeof day);
-    
-    switch (day)
-    {
-        case 1:
-            return 'Monday'
-        case 2:
-            return 'Tuesday'
-        case 3:
-            return 'Wednesday'
-        case 4:
-            return 'Thursday'
-        case 5:
-            return 'Friday'
-        case 6:
-            return 'Saturday'
-        case 0:
-            return 'Sunday'
-    }
-}
 
 /**
  * gets the id of a user
@@ -332,6 +228,9 @@ function getUserId(name:string) {
     findId.pluck();
 
     const userId = findId.get(name)
+    if (userId === undefined)
+        return -1;
+
     return userId;
 }
 
@@ -357,13 +256,20 @@ function getUserEntries() {
 }
 
 function newEntry(entry:string) {
-    if (typeof currentUser != 'number') 
+    if (typeof currentUser === 'number' && currentUser < 0 || typeof currentUser !== "number") 
         return false;
 
-    //FIXME: error here?
+    // FIXME: add check for userId against existing ids in users table
+    // otherwise foreign key constraint error
+
+
     const stmt = db.prepare(`INSERT INTO entries VALUES (?,?,?,?)`)
         .run(currentUser, entry, '', selectedDate.toString());
 
     print("New entry at:", stmt.lastInsertRowid)
+
+}
+
+function changeDate(date:string) {
 
 }

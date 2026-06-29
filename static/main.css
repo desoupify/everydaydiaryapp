@@ -31,6 +31,10 @@ body {
     font-family: 'zalando sans', sans-serif;
 }
 
+h1.title {
+    opacity: 70%;
+}
+
 a {
     opacity: 100%;
     color: var(--yellow);
